@@ -1,0 +1,65 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: test-ocirepository
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: fake-secret
+  namespace: test-ocirepository
+type: Opaque
+data:
+  username: YWRtaW4=
+  password: MWYyZDFlMmU2N2Rm
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: fake-cosign-secret
+  namespace: test-ocirepository
+type: Opaque
+data:
+  cosign.key: YWRtaW4=
+  cosign.pub: MWYyZDFlMmU2N2Rm
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: fake-serviceaccount
+  namespace: test-ocirepository
+---
+apiVersion: source.toolkit.fluxcd.io/v1beta2
+kind: OCIRepository
+metadata:
+  name: sample
+  namespace: test-ocirepository
+spec:
+  interval: 5m
+  ref:
+    branch: master
+  url: oci://ghcr.io/stefanprodan/podinfo-deploy
+  ref:
+    semver: "6.2.x"
+  secretRef:
+    name: fake-secret
+  serviceAccountName: fake-serviceaccount
+---
+apiVersion: policy.karmada.io/v1alpha1
+kind: PropagationPolicy
+metadata:
+  name: sample
+  namespace: test-ocirepository
+spec:
+  propagateDeps: true
+  resourceSelectors:
+    - apiVersion: source.toolkit.fluxcd.io/v1beta2
+      kind: OCIRepository
+      name: sample
+  placement:
+    clusterAffinity:
+      clusterNames:
+        - member1
+        - member3
+    replicaScheduling:
+      replicaSchedulingType: Duplicated

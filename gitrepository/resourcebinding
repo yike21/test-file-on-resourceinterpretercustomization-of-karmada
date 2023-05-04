@@ -1,0 +1,116 @@
+apiVersion: work.karmada.io/v1alpha2
+kind: ResourceBinding
+metadata:
+  annotations:
+    policy.karmada.io/applied-placement: '{"clusterAffinity":{"clusterNames":["member1","member3"]},"clusterTolerations":[{"key":"cluster.karmada.io/not-ready","operator":"Exists","effect":"NoExecute","tolerationSeconds":30},{"key":"cluster.karmada.io/unreachable","operator":"Exists","effect":"NoExecute","tolerationSeconds":30}],"replicaScheduling":{"replicaSchedulingType":"Duplicated"}}'
+    resourcebinding.karmada.io/dependencies: '[{"apiVersion":"v1","kind":"Secret","namespace":"test-gitrepository","name":"fake-secret"}]'
+  creationTimestamp: "2023-04-28T06:52:06Z"
+  finalizers:
+  - karmada.io/binding-controller
+  generation: 2
+  labels:
+    propagationpolicy.karmada.io/name: sample
+    propagationpolicy.karmada.io/namespace: test-gitrepository
+  name: sample-gitrepository
+  namespace: test-gitrepository
+  ownerReferences:
+  - apiVersion: source.toolkit.fluxcd.io/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: GitRepository
+    name: sample
+    uid: 52916151-e547-4ec6-ba53-2dba20d0063b
+  resourceVersion: "9103974"
+  uid: c97fb41a-40c6-40e6-a0af-03aaf4715789
+spec:
+  clusters:
+  - name: member1
+  - name: member3
+  placement:
+    clusterAffinity:
+      clusterNames:
+      - member1
+      - member3
+    clusterTolerations:
+    - effect: NoExecute
+      key: cluster.karmada.io/not-ready
+      operator: Exists
+      tolerationSeconds: 30
+    - effect: NoExecute
+      key: cluster.karmada.io/unreachable
+      operator: Exists
+      tolerationSeconds: 30
+    replicaScheduling:
+      replicaSchedulingType: Duplicated
+  propagateDeps: true
+  resource:
+    apiVersion: source.toolkit.fluxcd.io/v1
+    kind: GitRepository
+    name: sample
+    namespace: test-gitrepository
+    resourceVersion: "9103381"
+    uid: 52916151-e547-4ec6-ba53-2dba20d0063b
+  schedulerName: default-scheduler
+status:
+  aggregatedStatus:
+  - applied: true
+    clusterName: member1
+    health: Unhealthy
+    status:
+      conditions:
+      - lastTransitionTime: "2023-04-28T06:53:45Z"
+        message: building artifact
+        observedGeneration: 1
+        reason: ProgressingWithRetry
+        status: "True"
+        type: Reconciling
+      - lastTransitionTime: "2023-04-28T06:53:45Z"
+        message: 'failed to checkout and determine revision: unable to clone ''https://github.com/stefanprodan/podinfo'':
+          authentication required'
+        observedGeneration: 1
+        reason: GitOperationFailed
+        status: "False"
+        type: Ready
+      - lastTransitionTime: "2023-04-28T06:52:08Z"
+        message: 'failed to checkout and determine revision: unable to clone ''https://github.com/stefanprodan/podinfo'':
+          authentication required'
+        observedGeneration: 1
+        reason: GitOperationFailed
+        status: "True"
+        type: FetchFailed
+  - applied: true
+    clusterName: member3
+    health: Unhealthy
+    status:
+      conditions:
+      - lastTransitionTime: "2023-04-28T06:54:17Z"
+        message: building artifact
+        observedGeneration: 1
+        reason: Progressing
+        status: "True"
+        type: Reconciling
+      - lastTransitionTime: "2023-04-28T06:54:17Z"
+        message: building artifact
+        observedGeneration: 1
+        reason: Progressing
+        status: Unknown
+        type: Ready
+      - lastTransitionTime: "2023-04-28T06:54:11Z"
+        message: 'failed to checkout and determine revision: unable to clone ''https://github.com/stefanprodan/podinfo'':
+          authentication required'
+        observedGeneration: 1
+        reason: GitOperationFailed
+        status: "True"
+        type: FetchFailed
+  conditions:
+  - lastTransitionTime: "2023-04-28T06:52:07Z"
+    message: Binding has been scheduled
+    reason: BindingScheduled
+    status: "True"
+    type: Scheduled
+  - lastTransitionTime: "2023-04-28T06:52:07Z"
+    message: All works have been successfully applied
+    reason: FullyAppliedSuccess
+    status: "True"
+    type: FullyApplied
+  schedulerObservedGeneration: 2

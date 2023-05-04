@@ -1,0 +1,48 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: test-bucket
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: fake-secret
+  namespace: test-bucket
+type: Opaque
+data:
+  username: YWRtaW4=
+  password: MWYyZDFlMmU2N2Rm
+---
+apiVersion: source.toolkit.fluxcd.io/v1beta2
+kind: Bucket
+metadata:
+  name: sample
+  namespace: test-bucket
+spec:
+  provider: generic
+  interval: 5m0s
+  bucketName: podinfo
+  endpoint: minio.minio.svc.cluster.local:9000
+  timeout: 60s
+  insecure: true
+  secretRef:
+    name: fake-secret
+---
+apiVersion: policy.karmada.io/v1alpha1
+kind: PropagationPolicy
+metadata:
+  name: sample
+  namespace: test-bucket
+spec:
+  propagateDeps: true
+  resourceSelectors:
+    - apiVersion: source.toolkit.fluxcd.io/v1beta2
+      kind: Bucket
+      name: sample
+  placement:
+    clusterAffinity:
+      clusterNames:
+        - member1
+        - member3
+    replicaScheduling:
+      replicaSchedulingType: Duplicated
