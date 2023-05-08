@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: test-cleanuppolicy
+---
+apiVersion: kyverno.io/v2alpha1
+kind: CleanupPolicy
+metadata:
+  name: sample
+  namespace: test-cleanuppolicy
+spec:
+  match:
+    any:
+    - resources:
+        kinds:
+          - Deployment
+        selector:
+          matchLabels:
+            canremove: "true"
+  conditions:
+    any:
+    - key: "{{ target.spec.replicas }}"
+      operator: LessThan
+      value: 2
+  schedule: "*/5 * * * *"
+---
+apiVersion: policy.karmada.io/v1alpha1
+kind: PropagationPolicy
+metadata:
+  name: sample
+  namespace: test-cleanuppolicy
+spec:
+  propagateDeps: true
+  resourceSelectors:
+    - apiVersion: kyverno.io/v2alpha1
+      kind: CleanupPolicy
+      name: sample
+  placement:
+    clusterAffinity:
+      clusterNames:
+        - member2
+        - member3
+    replicaScheduling:
+      replicaSchedulingType: Duplicated
