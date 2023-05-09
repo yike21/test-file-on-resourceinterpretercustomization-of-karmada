@@ -1,0 +1,25 @@
+apiVersion: policy.karmada.io/v1alpha1
+kind: OverridePolicy
+metadata:
+  name: sample
+  namespace: test1
+  labels:
+    app: sample
+spec:
+  resourceSelectors:
+    - apiVersion: apps.kruise.io/v1beta1
+      kind: StatefulSet
+      name: sample
+      labelSelector:
+        matchLabels:
+          app: sample
+  overrideRules:
+    - targetCluster:
+        labelSelector:
+          matchLabels:
+            cluster: member1 
+    - overriders:
+        labelsOverrider:
+          - operator: add
+            value: 
+              bar: bar

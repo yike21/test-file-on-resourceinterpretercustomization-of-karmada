@@ -1,0 +1,90 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: test-cloneset
+---
+apiVersion: v1
+kind: ConfigMap
+metadata: 
+  name: mysql-config
+  namespace: test-cloneset
+data:
+  log: "1"
+  lower: "1"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: my-sample-config
+  namespace: test-cloneset
+data:
+  nginx.properties: |
+    proxy-connect-timeout: "10s"
+    proxy-read-timeout: "10s"
+    client-max-body-size: "2m"
+---
+apiVersion: apps.kruise.io/v1alpha1
+kind: CloneSet
+metadata:
+  labels:
+    app: sample
+  name: sample
+  namespace: test-cloneset
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: sample
+  template:
+    metadata:
+      labels:
+        app: sample
+    spec:
+      volumes:
+        - name: configmap
+          configMap:
+            name: my-sample-config    
+      containers:
+        - name: nginx
+          image: nginx:alpine
+          env: 
+          - name: logData
+            valueFrom: 
+              configMapKeyRef:
+                name: mysql-config
+                key: log
+          - name: lowerData
+            valueFrom:
+              configMapKeyRef:
+                name: mysql-config
+                key: lower
+---
+apiVersion: policy.karmada.io/v1alpha1
+kind: PropagationPolicy
+metadata:
+  name: sample
+  namespace: test-cloneset
+spec:
+  propagateDeps: true
+  resourceSelectors:
+    - apiVersion: apps.kruise.io/v1alpha1
+      kind: CloneSet
+      name: sample
+  placement:
+    clusterAffinity:
+      clusterNames:
+        - member1
+        - member3
+    replicaScheduling:
+      replicaDivisionPreference: Weighted
+      replicaSchedulingType: Divided
+      weightPreference:
+        staticWeightList:
+          - targetCluster:
+              clusterNames:
+                - member1
+            weight: 1
+          - targetCluster:
+              clusterNames:
+                - member3
+            weight: 1

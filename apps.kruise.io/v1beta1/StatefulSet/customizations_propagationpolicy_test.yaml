@@ -1,0 +1,126 @@
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: test-statefulset
+---
+apiVersion: v1
+kind: ConfigMap
+metadata: 
+  name: mysql-config
+  namespace: test-statefulset
+data:
+  log: "1"
+  lower: "1"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: my-sample-config
+  namespace: test-statefulset
+data:
+  nginx.properties: |
+    proxy-connect-timeout: "10s"
+    proxy-read-timeout: "10s"
+    client-max-body-size: "2m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sample-statefulset-headless-service
+  namespace: test-statefulset
+  labels:
+    app: sample-statefulset
+spec:
+  ports:
+  - port: 80
+    name: web
+  clusterIP: None
+  selector:
+    app: sample
+---
+apiVersion: apps.kruise.io/v1beta1
+kind: StatefulSet
+metadata:
+  name: sample
+  namespace: test-statefulset
+spec:
+  replicas: 2
+  serviceName: sample-statefulset-headless-service
+  selector:
+    matchLabels:
+      app: sample
+  template:
+    metadata:
+      labels:
+        app: sample
+    spec:
+      volumes:
+        - name: configmap
+          configMap:
+            name: my-sample-config  
+      readinessGates:
+      # A new condition that ensures the pod remains at NotReady state while the in-place update is happening
+      - conditionType: InPlaceUpdateReady
+      containers:
+        - name: nginx
+          image: nginx:alpine
+          ports:
+          - containerPort: 80
+            name: web          
+          env: 
+          - name: logData
+            valueFrom: 
+              configMapKeyRef:
+                name: mysql-config
+                key: log
+          - name: lowerData
+            valueFrom:
+              configMapKeyRef:
+                name: mysql-config
+                key: lower
+  podManagementPolicy: Parallel # allow parallel updates, works together with maxUnavailable
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      # Do in-place update if possible, currently only image update is supported for in-place update
+      podUpdatePolicy: InPlaceIfPossible
+      # Allow parallel updates with max number of unavailable instances equals to 2
+      maxUnavailable: 2
+---
+apiVersion: policy.karmada.io/v1alpha1
+kind: PropagationPolicy
+metadata:
+  name: sample-statefulset
+  namespace: test-statefulset
+spec:
+  propagateDeps: true
+  resourceSelectors:
+    - apiVersion: apps.kruise.io/v1beta1
+      kind: StatefulSet
+      name: sample
+  placement:
+    clusterAffinity:
+      clusterNames:
+        - member1
+        - member3
+    replicaScheduling:
+      replicaSchedulingType: Duplicated
+---
+apiVersion: policy.karmada.io/v1alpha1
+kind: PropagationPolicy
+metadata:
+  name: sample-service
+  namespace: test-statefulset
+spec:
+  propagateDeps: true
+  resourceSelectors:
+    - apiVersion: v1
+      kind: Service
+      name: sample-statefulset-headless-service
+  placement:
+    clusterAffinity:
+      clusterNames:
+        - member1
+        - member3
+    replicaScheduling:
+      replicaSchedulingType: Duplicated
