@@ -32,6 +32,9 @@ spec:
     healthInterpretation:
       luaScript: >
         function InterpretHealth(observedObj)
+          if observedObj.status == nil then
+            return false
+          end
           if observedObj.status.phase == nil or observedObj.status.phase == '' or observedObj.status.phase == 'Failed' or observedObj.status.failed == 'Error' then
             return false
           end
@@ -65,7 +68,6 @@ spec:
           synchronization = {}
           artifactRepositoryRef = {}
           artifactGCStatus = {}
-          generation = 0
 
           resourcesDuration = {}
           conditions = {}
@@ -78,12 +80,8 @@ spec:
           workflowMetricsError = {}
           workflowArtifactGCError = {}
           for i = 1, #statusItems do
-            if statusItems[i].status ~= nil and statusItems[i].status.phase ~= nil then
-              if phase == '' then
-                phase = phase..statusItems[i].clusterName..'='..statusItems[i].status.phase
-              else
-                phase = phase..','..statusItems[i].clusterName..'='..statusItems[i].status.phase
-              end
+            if statusItems[i].status ~= nil and statusItems[i].status.phase ~= nil and statusItems[i].status.phase ~= '' then
+              phase = statusItems[i].status.phase
             end
             if statusItems[i].status ~= nil and statusItems[i].status.startedAt ~= nil and statusItems[i].status.startedAt ~= '' then
               startedAt = statusItems[i].status.startedAt
@@ -93,10 +91,6 @@ spec:
             end
             if statusItems[i].status ~= nil and statusItems[i].status.estimatedDuration ~= nil then
               estimatedDuration = estimatedDuration + statusItems[i].status.estimatedDuration
-            end
-
-            if statusItems[i].status ~= nil and statusItems[i].status.tmpGeneration ~= nil then
-              generation = statusItems[i].status.tmpGeneration
             end
             if statusItems[i].status ~= nil and statusItems[i].status.compressedNodes ~= nil and statusItems[i].status.compressedNodes ~= '' then
               compressedNodes = statusItems[i].status.compressedNodes
@@ -124,18 +118,13 @@ spec:
             end   
             if statusItems[i].status ~= nil and statusItems[i].status.artifactRepositoryRef ~= nil then
               artifactRepositoryRef = statusItems[i].status.artifactRepositoryRef
-            end   
+            end
             if statusItems[i].status ~= nil and statusItems[i].status.artifactGCStatus ~= nil then
               artifactGCStatus = statusItems[i].status.artifactGCStatus
             end 
 
-
-            if statusItems[i].status ~= nil and statusItems[i].status.progress ~= nil then
-              if progress == '' then
-                progress = progress..statusItems[i].clusterName..'='..statusItems[i].status.progress
-              else
-                progress = progress..','..statusItems[i].clusterName..'='..statusItems[i].status.progress
-              end
+            if statusItems[i].status ~= nil and statusItems[i].status.progress ~= nil and statusItems[i].status.progress ~= '' then
+              progress = statusItems[i].status.progress
             end
             if statusItems[i].status ~= nil and statusItems[i].status.message ~= nil then
               if message == '' then
@@ -278,7 +267,6 @@ spec:
             conditionsIndex = conditionsIndex + 1
             conditions[conditionsIndex] = condition 
           end
-          desiredObj.metadata.generation = generation
           desiredObj.status.phase = phase
           desiredObj.status.startedAt = startedAt
           desiredObj.status.finishedAt = finishedAt
@@ -302,18 +290,14 @@ spec:
     retention:
       luaScript: >
         function Retain(desiredObj, observedObj)
-          return observedObj
-        end
-    statusReflection:
-      luaScript: >
-        function ReflectStatus (observedObj)
-          status = {}
-          if observedObj == nil or observedObj.status == nil then 
-            return status
+          if observedObj.metadata ~= nil and observedObj.metadata.generation ~= nil then
+            desiredObj.metadata.generation = observedObj.metadata.generation
           end
-          status = observedObj.status
-          status.tmpGeneration = observedObj.metadata.generation
-          return status
+          desiredObj.spec = observedObj.spec
+          if observedObj.status ~= nil then
+            desiredObj.status = observedObj.status
+          end
+          return desiredObj
         end
     dependencyInterpretation:
       luaScript: >
