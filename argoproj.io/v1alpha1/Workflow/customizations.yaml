@@ -68,7 +68,6 @@ spec:
           synchronization = {}
           artifactRepositoryRef = {}
           artifactGCStatus = {}
-
           resourcesDuration = {}
           conditions = {}
           type = ''
@@ -122,7 +121,6 @@ spec:
             if statusItems[i].status ~= nil and statusItems[i].status.artifactGCStatus ~= nil then
               artifactGCStatus = statusItems[i].status.artifactGCStatus
             end 
-
             if statusItems[i].status ~= nil and statusItems[i].status.progress ~= nil and statusItems[i].status.progress ~= '' then
               progress = statusItems[i].status.progress
             end
@@ -421,4 +419,13 @@ spec:
             idx = idx + 1
           end
           return refs
+        end
+    statusReflection:
+      luaScript: >
+        function ReflectStatus (observedObj)
+          status = {}
+          if observedObj == nil or observedObj.status == nil then 
+            return status
+          end
+          return observedObj.status
         end
